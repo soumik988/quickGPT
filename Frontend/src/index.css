@@ -1,0 +1,49 @@
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap");
+
+@import "tailwindcss";
+
+/* Custom dark variant */
+@custom-variant dark (&:where(.dark, .dark *));
+
+* {
+  font-family: "Outfit", sans-serif;
+}
+
+/* Theme variables */
+@theme {
+  --color-primary: #E6CCFF;
+}
+
+/* Hide scrollbar */
+::-webkit-scrollbar {
+  display: none;
+}
+
+/* Reset Tailwind styles except code blocks */
+.reset-tw {
+  font-family: inherit;
+  color: inherit;
+}
+
+.reset-tw p {
+  margin: 0.5rem 0;
+}
+
+.reset-tw h1,
+.reset-tw h2,
+.reset-tw h3 {
+  font-weight: bold;
+}
+
+.reset-tw ul {
+  list-style: disc;
+  padding-left: 1.5rem;
+}
+
+.loader div:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.loader div:nth-child(3) {
+  animation-delay: 0.4s;
+}
