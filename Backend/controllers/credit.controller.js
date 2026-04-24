@@ -1,7 +1,7 @@
 import Transcation from "../models/Transcation.js"
 import Stripe from "stripe"
 
-
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 
 const plans = [
     {
@@ -29,7 +29,6 @@ const plans = [
 
 //api controller for getting all plans
 
-
 export const getPlans = async (req, res) => {
     try {
         res.json({ success: true, plans })
@@ -38,10 +37,7 @@ export const getPlans = async (req, res) => {
     }
 }
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
-
 //API CONTROLLER FOR PURCHESING PLANS
-
 
 export const purchasePlan = async (req, res) => {
     try {
@@ -52,8 +48,8 @@ export const purchasePlan = async (req, res) => {
         if (!plan) {
             return res.json({ success: false, message: "Invalid Plan" })
         }
-        //create new transaction
 
+        //create new transaction
         const transaction = await Transcation.create({
             userId: userId,
             planId: plan._id,
@@ -61,7 +57,9 @@ export const purchasePlan = async (req, res) => {
             credits: plan.credits,
             isPaid: false
         })
+
         const { origin } = req.headers
+
         const session = await stripe.checkout.sessions.create({
             line_items: [
                 {
@@ -78,12 +76,47 @@ export const purchasePlan = async (req, res) => {
             mode: 'payment',
             success_url: `${origin}/loading`,
             cancel_url: `${origin}`,
-            metadata: { transactionId: transaction._id.toString(), appId: 'quickgpt' },
+            metadata: { 
+                transactionId: transaction._id.toString()
+            },
             expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
-
         });
+
         res.json({ success: true, url: session.url })
+
     } catch (error) {
         res.json({ success: false, message: error.message })
     }
 }
+
+
+// ✅ STRIPE WEBHOOK (ADDED ONLY FOR isPaid UPDATE)
+
+export const stripeWebhook = async (req, res) => {
+    const sig = req.headers['stripe-signature'];
+
+    try {
+        const event = stripe.webhooks.constructEvent(
+            req.body,
+            sig,
+            process.env.STRIPE_WEBHOOK_SECRET
+        );
+
+        // ✅ PAYMENT SUCCESS
+        if (event.type === 'checkout.session.completed') {
+            const session = event.data.object;
+
+            const transactionId = session.metadata.transactionId;
+
+            // ✅ UPDATE isPaid = true
+            await Transcation.findByIdAndUpdate(transactionId, {
+                isPaid: true
+            });
+        }
+
+        res.json({ received: true });
+
+    } catch (err) {
+        res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+};
